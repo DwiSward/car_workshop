@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Api\Admins;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateRepairServiceRequest extends FormRequest
+class StoreAssignRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -13,7 +13,7 @@ class UpdateRepairServiceRequest extends FormRequest
      */
     public function authorize()
     {
-        return false;
+        return auth()->check();
     }
 
     /**
@@ -24,7 +24,7 @@ class UpdateRepairServiceRequest extends FormRequest
     public function rules()
     {
         return [
-            //
+            'repair_service_id' => 'required|exists:repair_services,id'
         ];
     }
 }

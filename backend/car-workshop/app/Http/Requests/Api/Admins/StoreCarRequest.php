@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Api\Admins;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -13,7 +13,7 @@ class StoreCarRequest extends FormRequest
      */
     public function authorize()
     {
-        return false;
+        return auth()->check();
     }
 
     /**
@@ -24,7 +24,11 @@ class StoreCarRequest extends FormRequest
     public function rules()
     {
         return [
-            //
+            'brand' => 'required|string|max:255',
+            'color' => 'required|string|max:255',
+            'license_plate' => 'required|string|max:255|unique:cars',
+            'type' => 'required|string|max:255',
+            'customer_id' => 'required|exists:customers,id'
         ];
     }
 }

@@ -9,22 +9,22 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Mechanic extends Model
+class RepairServiceMechanic extends Model
 {
     use SoftDeletes;
     use HasFactory;
     use UuidTrait;
 
     use LogsActivity;
-    
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
         ->logOnly(['*']);
     }
 
-    public function user()
+    public function mechanic()
     {
-        return $this->morphOne(User::class, 'sourceable');
+        return $this->belongsTo(Mechanic::class);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use App\Traits\UuidTrait;
 use Spatie\Activitylog\LogOptions;
 use Illuminate\Database\Eloquent\Model;
@@ -20,5 +21,10 @@ class Customer extends Model
     {
         return LogOptions::defaults()
         ->logOnly(['*']);
+    }
+
+    public function user()
+    {
+        return $this->morphOne(User::class, 'sourceable');
     }
 }
