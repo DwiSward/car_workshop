@@ -52,3 +52,5 @@ after all services are finished try logging in as admin then go to the repair-in
 if there is a complaint from the owner, please enter it in the repair service save. then go to the repair services menu to assign a mechanic, then the mechanic must complete the repair again as in the previous step.
 if there are no complaints then change the status to done.
 then the system will send an invoice to the email and the process is complete
+### ERD & SMD
+https://1drv.ms/u/s!AoRptIDVqTZag89TZEXtiCXWRehycw?e=xlU6l1
