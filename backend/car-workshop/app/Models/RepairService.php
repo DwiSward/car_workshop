@@ -17,7 +17,7 @@ class RepairService extends Model
 
     use LogsActivity;
 
-    protected $appends = ['status_text'];
+    protected $appends = ['status_text', 'subtotal'];
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -35,10 +35,15 @@ class RepairService extends Model
         return $this->hasMany(RepairServiceMechanic::class);
     }
 
-        public function service()
-        {
-            return $this->belongsTo(Service::class);
-        }
+    public function service()
+    {
+        return $this->belongsTo(Service::class);
+    }
+
+    public function getSubtotalAttribute()
+    {
+        return $this->qty * $this->price;
+    }
 
     public function getStatusTextAttribute()
     {

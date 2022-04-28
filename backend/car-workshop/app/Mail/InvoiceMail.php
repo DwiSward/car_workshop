@@ -19,7 +19,10 @@ class InvoiceMail extends Mailable
      */
     public function __construct($id)
     {
-        $this->repair = Repair::findOrFail($id);
+        $this->repair = Repair::with(['repairServices' => function ($query) {
+                                    $query->whereNull('repair_service_id');
+                                }])
+                                ->findOrFail($id);
     }
 
     /**
@@ -29,6 +32,6 @@ class InvoiceMail extends Mailable
      */
     public function build()
     {
-        return $this->view('repair.invoice');
+        return $this->view('repairs.invoice');
     }
 }

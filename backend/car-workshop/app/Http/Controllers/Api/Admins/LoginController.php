@@ -41,11 +41,23 @@ class LoginController extends Controller
                     'message' => 'Could not create token.',
                 ], 500);
         }
-    
+
+        switch (auth()->user()->sourceable_type) {
+            case 'App\Models\Customer':
+                $role = 'user';
+                break;
+            case 'App\Models\Mechanic':
+                $role = 'mechanic';
+                break;
+            default:
+                $role = 'admin';
+                break;
+        }
         //Token created, return with success response and jwt token
         return response()->json([
             'success' => true,
             'token' => $token,
+            'permission' => $role
         ]);
     }
 

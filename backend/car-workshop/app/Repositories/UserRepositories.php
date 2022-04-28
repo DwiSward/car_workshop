@@ -12,14 +12,14 @@ class UserRepositories
 {
 
     // create user
-    public function create($request, $customer)
+    public function create($request, $customer, $type = 'App\Models\Customer')
     {
         $user = new User;
         $user->name = $request->name;
         $user->email = $request->email;
         $user->password = bcrypt($request->password);
         $user->sourceable_id = $customer->id;
-        $user->sourceable_type = 'App\Models\Customer';
+        $user->sourceable_type = $type;
         $user->save();
         return $user;
     }

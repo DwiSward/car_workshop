@@ -19,7 +19,7 @@ class Repair extends Model
 
     use LogsActivity;
 
-    protected $appends = ['created_at_text', 'status_of_services', 'status_text'];
+    protected $appends = ['created_at_text', 'status_of_services', 'status_text', 'total'];
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -42,11 +42,11 @@ class Repair extends Model
         return $this->created_at->format('d M Y H:i');
     }
 
-    public function getStatusOfServicesAttibute()
+    public function getStatusOfServicesAttribute()
     {
         $text = '';
         foreach ($this->repairServices as $key => $repairService) {
-            $text .= $repairService->service->name.' '.$repairService->status_text;
+            $text .= $repairService->service->name.', Status :'.$repairService->status_text.'. ';
         }
         return $text;
     }
@@ -78,5 +78,10 @@ class Repair extends Model
                 return 'Proposal';
                 break;
         }
+    }
+
+    public function getTotalAttribute()
+    {
+        return $this->repairServices->sum('subtotal');
     }
 }

@@ -42,7 +42,7 @@ class ServiceController extends Controller
     public function show($id)
     {
         $service = Service::findOrFail($id);
-        return ResponseHelper::responseFormat(true, 'Service Data', 200, ['service' => $service]);
+        return ResponseHelper::responseFormat(true, 'Service Data', 200, $service);
     }
 
     /**

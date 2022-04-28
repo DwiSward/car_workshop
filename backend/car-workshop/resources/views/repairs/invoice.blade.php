@@ -41,6 +41,8 @@
 		<th width="50">No.</th>
 		<th>Service</th>
 		<th width="100">Price</th>
+		<th width="100">Qty</th>
+		<th width="100">Subtotal</th>
 	</tr>
 	@if (isset($repair->repairServices))	
 		@foreach ($repair->repairServices as $key => $repairService)
@@ -50,6 +52,8 @@
 					{{ @$repairService->service->name }}
 				</td>
 				<td align="right">{{ number_format($repairService->price, 2, ',', '.') }}</td>
+				<td align="right">{{ number_format($repairService->qty, 2, ',', '.') }}</td>
+				<td align="right">{{ number_format($repairService->subtotal, 2, ',', '.') }}</td>
 			</tr>
 		@endforeach
 	@endif
@@ -60,9 +64,9 @@
 		<td>
 			<table border="1" cellspacing="0" cellpadding="4" width="100%">
 				<tr>
+					<td width="101" colspan="3" style="border-left-style: hidden;"><strong></strong></td>
 					<td width="101" style="border-left-style: hidden;"><strong>Total</strong></td>
-					<td width="101" style="border-left-style: hidden;"><strong></strong></td>
-					<td align="right"><strong>{{ number_format($repairService->total, 2, ',', '.') }}</strong></td>
+					<td align="right"><strong>{{ number_format($repair->total, 2, ',', '.') }}</strong></td>
 				</tr>
 				
 			</table>

@@ -30,13 +30,22 @@ Route::prefix('admin')->group(function () {
         Route::apiResource('mechanics', MechanicController::class);
         Route::apiResource('cars', CarController::class);
         Route::apiResource('services', ServiceController::class);
+
+        Route::get('repairs/{repair}/repair-done', [RepairController::class, 'getRepairDone']);
+        Route::get('repairs/{repair}/repair-cancel', [RepairController::class, 'getRepairCancel']);
+        Route::get('repairs/{repair}/repair-approve', [RepairController::class, 'getRepairApprove']);
         Route::apiResource('repairs', RepairController::class);
-        Route::get('repairs/repair-services', [RepairController::class, 'getRepairServices']);
-        Route::post('repairs/assign-mechanics', [RepairController::class, 'postAssignMechanics']);
-        Route::get('repairs/repair-services-mechanic', [RepairController::class, 'getRepairServicesByMechanic']);
-        Route::post('repairs/done-service', [RepairController::class, 'postDoneService']);
-        Route::post('repairs/complaine-service', [RepairController::class, 'postComplaineService']);
-        Route::get('repairs/repair-done', [RepairController::class, 'getRepairDone']);
-        Route::get('repairs/repair-cancel', [RepairController::class, 'getRepairCancel']);
+
+        Route::get('repair-services', [RepairController::class, 'getRepairServices']);
+        Route::get('repair-services/{repair_service}', [RepairController::class, 'getRepairServicesShow']);
+        Route::put('repair-services/{repair_service}', [RepairController::class, 'postAssignMechanics']);
+
+        Route::get('repair-mechanics', [RepairController::class, 'getRepairServicesByMechanic']);
+        Route::get('repair-mechanics/{repair_mechanic}', [RepairController::class, 'getRepairServicesByMechanicShow']);
+        Route::put('repair-mechanics/{repair_mechanic}', [RepairController::class, 'postDoneService']);
+
+        Route::get('repair-inspects', [RepairController::class, 'getInspect']);
+        Route::get('repair-inspects/{repair_inspect}', [RepairController::class, 'getInspectShow']);
+        Route::put('repair-inspects/{repair_inspect}', [RepairController::class, 'postComplaineService']);
     });
 });

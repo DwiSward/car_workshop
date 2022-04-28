@@ -22,8 +22,8 @@ class CustomerController extends Controller
     {
         $customers = Customer::with('user')->get();
         foreach ($customers as $key => $customer) {
-            $customer->name = $customer->user->name;
-            $customer->email = $customer->user->email;
+            $customer->name = @$customer->user->name;
+            $customer->email = @$customer->user->email;
         }
         return ResponseHelper::responseFormat(true, 'Customer Data', 200, $customers);
     }
@@ -56,8 +56,8 @@ class CustomerController extends Controller
     public function show($id)
     {
         $customer = Customer::with('user')->findOrFail($id);
-        $customer->name = $customer->user->name;
-        $customer->email = $customer->user->email;
+        $customer->name = @$customer->user->name;
+        $customer->email = @$customer->user->email;
         return ResponseHelper::responseFormat(true, 'Customer Data', 200, $customer);
     }
 

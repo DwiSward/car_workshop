@@ -11,31 +11,29 @@ import {
     PasswordInput 
 } from 'react-admin';
 
-export const CustomerList = () => (
+export const ServiceList = () => (
     <List>
         <Datagrid rowClick="edit">
             <TextField source="name" />
-            <EmailField source="email" />
+            <TextField source="price" />
         </Datagrid>
     </List>
 );
 
-export const CustomerEdit = () => (
+export const ServiceEdit = () => (
     <Edit>
         <SimpleForm>
             <TextInput source="name" />
-            <TextInput source="email" />
+            <TextInput source="price" />
         </SimpleForm>
     </Edit>
 );
 
-export const CustomerCreate = () => (
+export const ServiceCreate = () => (
     <Create>
         <SimpleForm>
             <TextInput source="name" />
-            <TextInput source="email" />
-            <PasswordInput source="password" />
-            <PasswordInput source="password_confirmation" />
+            <TextInput source="price" />
         </SimpleForm>
     </Create>
 );

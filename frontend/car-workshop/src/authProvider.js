@@ -43,5 +43,8 @@ export default {
             : Promise.reject();
     },
     // called when the user navigates to a new location, to check for permissions / roles
-    getPermissions: () => Promise.resolve(),
+    getPermissions: () => {
+        const { token, permission } = JSON.parse(localStorage.getItem('auth'))
+        return permission ? Promise.resolve(permission) : Promise.reject();
+    }
 };

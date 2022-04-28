@@ -18,7 +18,11 @@ class CarController extends Controller
      */
     public function index()
     {
-        return ResponseHelper::responseFormat(true, 'Car Data', 200, Car::all());
+        $cars = Car::with('customer.user')->get();
+        foreach ($cars as $key => $car) {
+            $car->owner_name = @$car->customer->user->name;
+        }
+        return ResponseHelper::responseFormat(true, 'Car Data', 200, $cars);
     }
 
     /**
@@ -41,7 +45,8 @@ class CarController extends Controller
      */
     public function show($id)
     {
-        $car = Car::findOrFail($id);
+        $car = Car::with('customer.user')->findOrFail($id);
+        $car->owner_name = @$car->customer->user->name;
         return ResponseHelper::responseFormat(true, 'Car Data', 200, $car);
     }
 

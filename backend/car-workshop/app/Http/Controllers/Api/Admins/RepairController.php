@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers\Api\Admins;
 
+use Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use App\Models\Repair;
+use App\Models\Service;
 use App\Mail\InvoiceMail;
 use Illuminate\Http\Request;
 use App\Models\RepairService;
@@ -21,7 +25,9 @@ class RepairController extends Controller
      */
     public function index()
     {
-        $repairs = Repair::with('repairServices', 'car.customer.user')->get();
+        $repairs = Repair::with('repairServices', 'car.customer.user')
+                        ->whereNotIn('status', [4])
+                        ->get();
         foreach ($repairs as $key => $repair) {
             $repair->owner_name = $repair->car->customer->user->name;
         }
@@ -42,25 +48,28 @@ class RepairController extends Controller
             $repair->created_by = auth()->user()->id;
             $repair->car_id = $request->car_id;
             $repair->work_duration = $request->work_duration;
+            $repair->status = 0;
             $repair->save();
 
             // save repair_services
             $services = [];
             $serviceIds = [];
             $servicePrices = Service::pluck('price', 'id')->toArray();
-            foreach ($repair->repairServices as $key => $service) {
+            foreach ($request->repairServices as $key => $service) {
                 // check duplicate service
-                if (in_array($service->service_id, $serviceIds) ) {
+                if (in_array($service['service_id'], $serviceIds) ) {
                     abort(422, 'Duplicate service');
                 }
 
                 $services[] = [
+                    'id' => Str::uuid()->toString(),
                     'repair_id' => $repair->id,
-                    'service_id' => $service->service_id,
-                    'price' => $servicePrices[$service->service_id],
-                    'note' => $service->note
+                    'service_id' => $service['service_id'],
+                    'price' => $servicePrices[$service['service_id']],
+                    'note' => $service['note'],
+                    'qty' => $service['qty']
                 ];
-                $serviceIds[] = $service->service_id;
+                $serviceIds[] = $service['service_id'];
             }
             RepairService::insert($services);
             return $repair;
@@ -73,18 +82,41 @@ class RepairController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function getRepairServices()
+    public function getRepairServices(Request $request)
     {
+        $filter = json_decode($request->filter);
         $repairServices = RepairService::with('service', 'repair.car')
                                         ->whereNull('repair_service_id')
+                                        ->when(isset($filter->repair_id), function ($query) use ($filter){
+                                            $query->where('repair_id', $filter->repair_id);
+                                        })
                                         ->get();
         foreach ($repairServices as $key => $repairService) {
             $repairService->car_brand = $repairService->repair->car->brand;
             $repairService->car_license_plate = $repairService->repair->car->license_plate;
             $repairService->car_color = $repairService->repair->car->color;
             $repairService->car_type = $repairService->repair->car->type;
+            $repairService->service_name = $repairService->service->name;
         }
         return ResponseHelper::responseFormat(true, 'Repair Services', 200, $repairServices);
+    }
+
+    /**
+     * Display a detail of the repair service for asign to mechanic.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function getRepairServicesShow($id)
+    {
+        $repairService = RepairService::with('service', 'repair.car')
+                                        ->findOrFail($id);
+
+        $repairService->car_brand = $repairService->repair->car->brand;
+        $repairService->car_license_plate = $repairService->repair->car->license_plate;
+        $repairService->car_color = $repairService->repair->car->color;
+        $repairService->car_type = $repairService->repair->car->type;
+        $repairService->service_name = $repairService->service->name;
+        return ResponseHelper::responseFormat(true, 'Repair Services', 200, $repairService);
     }
 
     /**
@@ -92,31 +124,37 @@ class RepairController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function postAssignMechanics(StoreAssignRequest $request)
+    public function postAssignMechanics(Request $request, $id)
     {
-        $repairService = RepairService::findOrFail($request->repair_service_id);
-        $repair = Repair::with('repairServices.repairServiceMechanic')->findOrFail($repairService->repair_id);
-        $mechanicIds = [];
-        foreach ($repair->repairServices as $key => $repairService) {
-            foreach ($repairService->repairServiceMechanics as $key => $repairServiceMechanic) {
-                $mechanicIds[] = $repairServiceMechanic->mechanic_id;
-            }
-        }
-
-        $repairMechanics = [];
-        foreach ($request->mechanics as $key => $mechanic) {
-            if (in_array($mechanic, $mechanicIds)) {
-                abort(422, 'Duplicate mechanic');
+        $repairService = DB::transaction(function () use ($request, $id) {
+            $repairService = RepairService::findOrFail($id);
+            $repairService->status = 1;
+            $repairService->save();
+            $repair = Repair::with('repairServices.repairServiceMechanics')->findOrFail($repairService->repair_id);
+            $mechanicIds = [];
+            foreach ($repair->repairServices as $key => $repairService) {
+                foreach ($repairService->repairServiceMechanics as $key => $repairServiceMechanic) {
+                    $mechanicIds[] = $repairServiceMechanic->mechanic_id;
+                }
             }
 
-            $repairMechanics[] = [
-                'repair_service_id' => $repairService->id,
-                'mechanic_id' => $mechanic
-            ];
-            $repairMechanics[] = $mechanic;
-        }
-        RepairServiceMechanic::insert($repairMechanics);
-        return ResponseHelper::responseFormat(true, 'Mechanic Assign', 200);
+            $repairMechanics = [];
+            foreach ($request->repairServices as $key => $mechanic) {
+                if (in_array($mechanic, $mechanicIds)) {
+                    abort(422, 'Duplicate mechanic');
+                }
+
+                $repairMechanics[] = [
+                    'id' => Str::uuid()->toString(),
+                    'repair_service_id' => $repairService->id,
+                    'mechanic_id' => $mechanic['mechanic_id']
+                ];
+                $mechanicIds[] = $mechanic['mechanic_id'];
+            }
+            RepairServiceMechanic::insert($repairMechanics);
+            return $repairService;
+        });
+        return ResponseHelper::responseFormat(true, 'Mechanic Assign', 200, $repairService);
     }
 
     /**
@@ -128,7 +166,7 @@ class RepairController extends Controller
     {
         $repairServices = RepairService::with('service', 'repair.car')
                                         ->whereHas('repairServiceMechanics', function($query) {
-                                            $query->where('mechanic_id', auth()->user()->id);
+                                            $query->where('mechanic_id', auth()->user()->sourceable_id);
                                         })
                                         ->get();
         foreach ($repairServices as $key => $repairService) {
@@ -136,10 +174,11 @@ class RepairController extends Controller
             $repairService->car_license_plate = $repairService->repair->car->license_plate;
             $repairService->car_color = $repairService->repair->car->color;
             $repairService->car_type = $repairService->repair->car->type;
+            $repairService->service_name = $repairService->service->name;
             $repairService->partner = '';
             foreach ($repairService->repairServiceMechanics as $key => $repairServiceMechanic) {
                 if ($repairServiceMechanic->mechanic_id != auth()->user()->id) {
-                    $repairService->partner .= $repairServiceMechanic->mechanic->user->name;
+                    $repairService->partner .= $repairServiceMechanic->mechanic->user->name.' ';
                 }
             }
         }
@@ -147,15 +186,39 @@ class RepairController extends Controller
     }
 
     /**
+     * Display a detail of the repair service filter by mechanic login.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function getRepairServicesByMechanicShow($id)
+    {
+        $repairService = RepairService::with('service', 'repair.car')
+                                        ->findOrFail($id);
+
+        $repairService->car_brand = $repairService->repair->car->brand;
+        $repairService->car_license_plate = $repairService->repair->car->license_plate;
+        $repairService->car_color = $repairService->repair->car->color;
+        $repairService->car_type = $repairService->repair->car->type;
+        $repairService->service_name = $repairService->service->name;
+        $repairService->partner = '';
+        foreach ($repairService->repairServiceMechanics as $key => $repairServiceMechanic) {
+            if ($repairServiceMechanic->mechanic_id != auth()->user()->id) {
+                $repairService->partner .= $repairServiceMechanic->mechanic->user->name;
+            }
+        }
+        return ResponseHelper::responseFormat(true, 'Repair Services', 200, $repairService);
+    }
+
+    /**
      * set repair service done.
      *
      * @return \Illuminate\Http\Response
      */
-    public function postDoneService(UpdateRepairServiceRequest $request)
+    public function postDoneService(Request $request, $id)
     {
-        $repairService = DB::transaction(function () use ($request) {
-            $repairService = RepairService::findOrFail($request->repair_service_id);
-            $repairService->status = 2;
+        $repairService = DB::transaction(function () use ($request, $id) {
+            $repairService = RepairService::findOrFail($id);
+            $repairService->status = $request->status;
             $repairService->save();
 
             $repairServices = RepairService::where('repair_id', $repairService->repair_id)
@@ -172,30 +235,115 @@ class RepairController extends Controller
     }
 
     /**
+     * Display a listing of the resource done service.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function getInspect()
+    {
+        $repairs = Repair::with('repairServices', 'car.customer.user')
+                        ->where('status', 3)
+                        ->get();
+        foreach ($repairs as $key => $repair) {
+            $repair->owner_name = $repair->car->customer->user->name;
+        }
+        return ResponseHelper::responseFormat(true, 'Repair Data', 200, $repairs);
+    }
+
+     /**
+     * Display the specified resource done service.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function getInspectShow($id)
+    {
+        $repair = Repair::with('repairServices.service', 'car.customer.user')
+                        ->with(['repairServices' => function ($query) {
+                            $query->with('service')
+                                ->whereNull('repair_service_id');
+                        }])
+                        ->findOrFail($id);
+        $repair->owner_name = $repair->car->customer->user->name;
+        $repair->car_brand = $repair->car->brand;
+        foreach ($repair->repairServices as $key => $repairService) {
+            $repairService->service_name = $repairService->service->name;
+            $repairService->price = $repairService->price;
+        }
+        return ResponseHelper::responseFormat(true, 'Repair Data', 200, $repair);
+    }
+
+    /**
      * set complain service.
      *
      * @return \Illuminate\Http\Response
      */
-    public function postComplaineService(UpdateRepairServiceRequest $request)
+    public function postComplaineService(Request $request, $id)
     {
-        $newRepairService = DB::transaction(function () use ($request) {
-            $repairService = RepairService::findOrFail($request->repair_service_id);
-            
-            $newRepairService = new RepairService;
-            $newRepairService->repair_id = $repairService->repair_id;
-            $newRepairService->service_id = $repairService->service_id;
-            $newRepairService->price = $repairService->price;
-            $newRepairService->status = $repairService->status;
-            $newRepairService->note = $request->note;
-            $newRepairService->save();
+        $newRepairService = DB::transaction(function () use ($request, $id) {
+            if ($request->status == 4) {
+                $repair = Repair::with(['repairServices' => function ($query) {
+                                    $query->whereNull('repair_service_id');
+                                }])
+                                ->findOrFail($id);
+                $repair->status = 4;
+                $repair->save();
 
-            $repairService->repair_service_id = $newRepairService->id;
-            $repairService->save();
-            return $newRepairService;
+                $mail = Mail::to($repair->car->customer->user->email);
+                $mail->send(new InvoiceMail($repair->id));
+                return $repair;
+            }
+            else {
+                $repair = Repair::findOrFail($id);
+                $repair->status = 2;
+                $repair->save();
+
+                foreach ($request->repairServices as $key => $service) {
+                    $repairService = RepairService::findOrFail($service['repair_service_id']);
+                    $newRepairService = new RepairService;
+                    $newRepairService->repair_id = $repairService->repair_id;
+                    $newRepairService->service_id = $repairService->service_id;
+                    $newRepairService->price = $repairService->price;
+                    $newRepairService->qty = $repairService->qty;
+                    $newRepairService->status = 0;
+                    $newRepairService->note = $service['note'];
+                    $newRepairService->save();
+
+                    $repairService->repair_service_id = $newRepairService->id;
+                    $repairService->save();
+                    return $newRepairService;
+                }
+            }
         });
 
         return ResponseHelper::responseFormat(true, 'Mechanic Assign', 200, $newRepairService);
     }
+
+    // /**
+    //  * set complain service.
+    //  *
+    //  * @return \Illuminate\Http\Response
+    //  */
+    // public function postComplaineService(UpdateRepairServiceRequest $request)
+    // {
+    //     $newRepairService = DB::transaction(function () use ($request) {
+    //         $repairService = RepairService::findOrFail($request->repair_service_id);
+            
+    //         $newRepairService = new RepairService;
+    //         $newRepairService->repair_id = $repairService->repair_id;
+    //         $newRepairService->service_id = $repairService->service_id;
+    //         $newRepairService->price = $repairService->price;
+    //         $newRepairService->status = $repairService->status;
+    //         $newRepairService->note = $request->note;
+    //         $newRepairService->save();
+
+    //         $repairService->repair_service_id = $newRepairService->id;
+    //         $repairService->save();
+    //         return $newRepairService;
+    //     });
+
+    //     return ResponseHelper::responseFormat(true, 'Mechanic Assign', 200, $newRepairService);
+    // }
 
     /**
      * set repair done.
@@ -229,30 +377,51 @@ class RepairController extends Controller
         return ResponseHelper::responseFormat(true, 'Repair Canceled', 200, $repair);
     }
 
-    // /**
-    //  * Display the specified resource.
-    //  *
-    //  * @param  int  $id
-    //  * @return \Illuminate\Http\Response
-    //  */
-    // public function show($id)
-    // {
-    //     $car = Car::findOrFail($id);
-    //     return ResponseHelper::responseFormat(true, 'Car Data', 200, $car);
-    // }
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        $repair = Repair::with('repairServices.service', 'car.customer.user')->findOrFail($id);
+        $repair->owner_name = $repair->car->customer->user->name;
+        $repair->car_brand = $repair->car->brand;
+        foreach ($repair->repairServices as $key => $repairService) {
+            $repairService->service_name = $repairService->service->name;
+            $repairService->price = $repairService->price;
+        }
+        return ResponseHelper::responseFormat(true, 'Repair Data', 200, $repair);
+    }
 
-    // /**
-    //  * Update the specified resource in storage.
-    //  *
-    //  * @param  UpdateCarRequest  $request
-    //  * @param  int  $id
-    //  * @return \Illuminate\Http\Response
-    //  */
-    // public function update(UpdateCarRequest $request, $id)
-    // {
-    //     $car = $this->saveData(Car::findOrFail($id), $request);
-    //     return ResponseHelper::responseFormat(true, 'Car Updated', 200, $car);
-    // }
+    /**
+     * set approve repair.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function getRepairApprove($id)
+    {
+        $repair = Repair::findOrFail($id);
+        $repair->status = 1;
+        $repair->save();
+        return ResponseHelper::responseFormat(true, 'Repair Canceled', 200, $repair);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+        $repair = Repair::findOrFail($id);
+        $repair->status = $request->status;
+        $repair->save();
+        return ResponseHelper::responseFormat(true, 'Repair Updated', 200, $repair);
+    }
 
     // /**
     //  * Remove the specified resource from storage.

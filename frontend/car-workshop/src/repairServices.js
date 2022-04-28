@@ -19,41 +19,36 @@ import {
     SelectField
 } from 'react-admin';
 
-export const RepairList = () => (
+export const RepairServiceList = () => (
     <List>
         <Datagrid rowClick="edit">
-            <TextField source="owner_name" />
-            <TextField source="created_at_text" />
-            <TextField source="status_of_services" />
-            <TextField source="status_text" />
+            <TextField source="car_brand" />
+            <TextField source="car_license_plate" />
+            <TextField source="car_color" />
+            <TextField source="car_type" />
+            <TextField source="service_name" />
         </Datagrid>
     </List>
 );
 
-export const RepairEdit = () => (
+export const RepairServiceEdit = () => (
     <Edit>
         <Form>
-            <TextInput source="owner_name" editable="false" />
             <TextInput source="car_brand" editable="false" />
-            <TextInput source="work_duration" editable="false" />
-            <TextInput source="total" editable="false" />
-            <SelectInput source="status" choices={[
-                { id: 0, name: 'New' },
-                { id: 1, name: 'Approved' },
-                { id: 5, name: 'Cancel' },
-            ]} />
-            <ArrayField source="repair_services">
-                <Datagrid>
-                    <TextField source="service_name" />
-                    <TextField source="price" />
-                </Datagrid>
-            </ArrayField>
+            <TextInput source="car_license_plate" editable="false" />
+            <ArrayInput source="repairServices">
+                <SimpleFormIterator>
+                    <ReferenceInput source="mechanic_id" reference="mechanics">
+                        <SelectInput optionText="name" />
+                    </ReferenceInput>
+                </SimpleFormIterator>
+            </ArrayInput>
             <SaveButton />
         </Form>
     </Edit>
 );
 
-export const RepairCreate = () => (
+export const RepairServiceCreate = () => (
     <Create>
         <SimpleForm>
             <ReferenceInput source="car_id" reference="cars">

@@ -20,7 +20,12 @@ class MechanicController extends Controller
      */
     public function index()
     {
-        return ResponseHelper::responseFormat(true, 'Mechanic Data', 200, Mechanic::all());
+        $mechanics = Mechanic::with('user')->get();
+        foreach ($mechanics as $key => $mechanic) {
+            $mechanic->name = $mechanic->user->name;
+            $mechanic->email = $mechanic->user->email;
+        }
+        return ResponseHelper::responseFormat(true, 'Mechanic Data', 200, $mechanics);
     }
 
     /**
@@ -35,7 +40,7 @@ class MechanicController extends Controller
             $mechanic = new Mechanic;
             $mechanic->save();
 
-            $user = UserRepositories::create($request);
+            $user = UserRepositories::create($request, $mechanic, 'App\Models\Mechanic');
             return $mechanic;
         });
         return ResponseHelper::responseFormat(true, 'Mechanic Created', 200, $mechanic);
@@ -50,8 +55,9 @@ class MechanicController extends Controller
     public function show($id)
     {
         $mechanic = Mechanic::with('user')->findOrFail($id);
-        $user = $mechanic->user;
-        return ResponseHelper::responseFormat(true, 'Mechanic Data', 200, ['mechanic' => $mechanic, 'user' => $user]);
+        $mechanic->name = $mechanic->user->name;
+        $mechanic->email = $mechanic->user->email;
+        return ResponseHelper::responseFormat(true, 'Mechanic Data', 200, $mechanic);
     }
 
     /**

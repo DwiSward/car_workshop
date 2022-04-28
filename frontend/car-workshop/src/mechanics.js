@@ -11,7 +11,7 @@ import {
     PasswordInput 
 } from 'react-admin';
 
-export const CustomerList = () => (
+export const MechanicList = () => (
     <List>
         <Datagrid rowClick="edit">
             <TextField source="name" />
@@ -20,7 +20,7 @@ export const CustomerList = () => (
     </List>
 );
 
-export const CustomerEdit = () => (
+export const MechanicEdit = () => (
     <Edit>
         <SimpleForm>
             <TextInput source="name" />
@@ -29,7 +29,7 @@ export const CustomerEdit = () => (
     </Edit>
 );
 
-export const CustomerCreate = () => (
+export const MechanicCreate = () => (
     <Create>
         <SimpleForm>
             <TextInput source="name" />

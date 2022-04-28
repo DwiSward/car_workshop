@@ -19,41 +19,36 @@ import {
     SelectField
 } from 'react-admin';
 
-export const RepairList = () => (
+export const RepairMechanicList = () => (
     <List>
         <Datagrid rowClick="edit">
-            <TextField source="owner_name" />
-            <TextField source="created_at_text" />
-            <TextField source="status_of_services" />
-            <TextField source="status_text" />
+            <TextField source="car_brand" />
+            <TextField source="car_license_plate" />
+            <TextField source="car_color" />
+            <TextField source="car_type" />
+            <TextField source="service_name" />
+            <TextField source="partner" />
         </Datagrid>
     </List>
 );
 
-export const RepairEdit = () => (
+export const RepairMechanicEdit = () => (
     <Edit>
         <Form>
-            <TextInput source="owner_name" editable="false" />
             <TextInput source="car_brand" editable="false" />
-            <TextInput source="work_duration" editable="false" />
-            <TextInput source="total" editable="false" />
+            <TextInput source="car_license_plate" editable="false" />
+            <TextInput source="service_name" editable="false" />
+            <TextInput source="qty" editable="false" />
             <SelectInput source="status" choices={[
-                { id: 0, name: 'New' },
-                { id: 1, name: 'Approved' },
-                { id: 5, name: 'Cancel' },
+                { id: 1, name: 'On Progress' },
+                { id: 2, name: 'Done' },
             ]} />
-            <ArrayField source="repair_services">
-                <Datagrid>
-                    <TextField source="service_name" />
-                    <TextField source="price" />
-                </Datagrid>
-            </ArrayField>
             <SaveButton />
         </Form>
     </Edit>
 );
 
-export const RepairCreate = () => (
+export const RepairMechanicCreate = () => (
     <Create>
         <SimpleForm>
             <ReferenceInput source="car_id" reference="cars">
